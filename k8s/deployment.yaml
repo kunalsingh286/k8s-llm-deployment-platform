@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: llm-platform
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: llm-platform
+  template:
+    metadata:
+      labels:
+        app: llm-platform
+    spec:
+      initContainers:
+        - name: ollama-pull-model
+          image: ollama/ollama
+          command: ["sh", "-c"]
+          args:
+            - ollama serve & sleep 5 && ollama pull tinyllama
+          volumeMounts:
+            - name: ollama-data
+              mountPath: /root/.ollama
+
+      containers:
+        - name: gateway
+          image: llm-gateway:v1
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+          env:
+            - name: MODEL_NAME
+              value: "tinyllama"
+            - name: OLLAMA_URL
+              value: "http://localhost:11434"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 20
+
+        - name: ollama
+          image: ollama/ollama
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 11434
+          volumeMounts:
+            - name: ollama-data
+              mountPath: /root/.ollama
+
+      volumes:
+        - name: ollama-data
+          emptyDir: {}
+

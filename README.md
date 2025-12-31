@@ -25,6 +25,14 @@ using Ollama, FastAPI, Docker, and Kubernetes.
 - Fully configurable using environment variables
 - Verified end-to-end inference inside a containerized environment
 
+## Phase 4: Kubernetes Deployment
+
+- Deployed LLM gateway and Ollama runtime as two containers within a single Kubernetes Pod
+- Exposed inference service using Kubernetes Service
+- Enabled health checks via readiness and liveness probes
+- Verified in-cluster communication and LLM inference
+
+
 
 
 
