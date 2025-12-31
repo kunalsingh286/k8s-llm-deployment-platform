@@ -12,38 +12,51 @@ spec:
       labels:
         app: llm-platform
     spec:
+      # Init container to preload the LLM model
       initContainers:
         - name: ollama-pull-model
           image: ollama/ollama
+          imagePullPolicy: IfNotPresent
           command: ["sh", "-c"]
           args:
-            - ollama serve & sleep 5 && ollama pull tinyllama
+            - |
+              ollama serve & \
+              sleep 5 && \
+              ollama pull ${MODEL_NAME}
+          envFrom:
+            - configMapRef:
+                name: model-config-v2
           volumeMounts:
             - name: ollama-data
               mountPath: /root/.ollama
 
       containers:
+        # FastAPI Gateway
         - name: gateway
           image: llm-gateway:v1
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8000
           env:
-            - name: MODEL_NAME
-              value: "tinyllama"
             - name: OLLAMA_URL
               value: "http://localhost:11434"
+          envFrom:
+            - configMapRef:
+                name: model-config-v1
           readinessProbe:
             httpGet:
               path: /health
               port: 8000
             initialDelaySeconds: 10
+            periodSeconds: 5
           livenessProbe:
             httpGet:
               path: /health
               port: 8000
             initialDelaySeconds: 20
+            periodSeconds: 10
 
+        # Ollama Runtime
         - name: ollama
           image: ollama/ollama
           imagePullPolicy: IfNotPresent
@@ -56,4 +69,5 @@ spec:
       volumes:
         - name: ollama-data
           emptyDir: {}
+
 
